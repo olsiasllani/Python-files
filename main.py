@@ -1,28 +1,55 @@
-from models import User
-from pydantic import ValidationError
+import sqlite3
 
-def register_user(data):
+# Lidhja me databazën
+conn = sqlite3.connect('student.db')
+cursor = conn.cursor()
+
+# Krijimi i tabelës nëse nuk ekziston
+cursor.execute('''
+CREATE TABLE IF NOT EXISTS students (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    name TEXT NOT NULL,
+    age INTEGER,
+    email TEXT UNIQUE
+)
+''')
+
+# Funksioni për të shtuar një student
+def add_student(name, age, email):
     try:
-        user = User(**data)
-        print("\n✅ Përdoruesi u regjistrua me sukses!")
-        print(user.model_dump_json(indent=4))  # kjo është metoda e re në Pydantic v2
-    except ValidationError as e:
-        print("\n❌ Gabim gjatë regjistrimit:")
-        print(e.json(indent=4))  # kjo ende funksionon për ValidationError
+        cursor.execute('INSERT INTO students (name, age, email) VALUES (?, ?, ?)', (name, age, email)) 
+        conn.commit()
+        print("Studenti u shtua me sukses.")
+    except sqlite3.IntegrityError:
+        print("Emaili ekziston tashmë në databazë.")
 
-if __name__ == "__main__":
-    # Shembull i saktë
-    user_data = {
-        "name": "Arta Dushi",
-        "email": "arta@example.com",
-        "age": 27
-    }
-    register_user(user_data)
+# Funksioni për të shfaqur studentët
+def show_students():
+    cursor.execute('SELECT * FROM students') 
+    students = cursor.fetchall()
+    print("\nLista e Studentëve:")
+    for student in students:
+        print(f"ID: {student[0]}, Emri: {student[1]}, Mosha: {student[2]}, Emaili: {student[3]}")
 
-    # Shembull me gabim
-    bad_user_data = {
-        "name": "A",
-        "email": "not-an-email",
-        "age": 15
-    }
-    register_user(bad_user_data)
+# Menuja interaktive
+while True:
+    print("\n1. Shto student")
+    print("2. Shfaq studentët")
+    print("3. Dil")
+    choice = input("Zgjidh një opsion: ")
+
+    if choice == '1':
+        name = input("Emri: ")
+        age = int(input("Mosha: "))
+        email = input("Email: ")
+        add_student(name, age, email)
+    elif choice == '2':
+        show_students()
+    elif choice == '3':
+        print("Duke dalë...")
+        break
+    else:
+        print("Zgjedhje e pavlefshme. Provo përsëri.")
+
+# Mbyllja e lidhjes me databazën
+conn.close()
