@@ -4,7 +4,7 @@ import os
 
 CAKES_FILE = 'cakes.json'
 ORDERS_FILE = 'orders.json'
-REVIEWS_FILE = 'reviews.json'  # New for reviews
+REVIEWS_FILE = 'reviews.json'
 
 # ---------- Utility Functions ----------
 
@@ -17,6 +17,26 @@ def load_data(file, default):
 def save_data(file, data):
     with open(file, 'w') as f:
         json.dump(data, f, indent=2)
+
+# ---------- Admin Authentication ----------
+
+def admin_login():
+    st.sidebar.subheader("Admin Login")
+    if "admin_authenticated" not in st.session_state:
+        st.session_state.admin_authenticated = False
+    if "login_trigger" not in st.session_state:
+        st.session_state.login_trigger = False  # dummy flag for rerun
+
+    if not st.session_state.admin_authenticated:
+        password = st.sidebar.text_input("Enter admin password:", type="password")
+        if st.sidebar.button("Login"):
+            if password == "olsi08":  # <-- Your admin password here
+                st.session_state.admin_authenticated = True
+                # Toggle dummy flag to trigger rerun
+                st.session_state.login_trigger = not st.session_state.login_trigger
+            else:
+                st.sidebar.error("Incorrect password!")
+        st.stop()  # Stop execution until login
 
 # ---------- Cake Management ----------
 
@@ -34,8 +54,12 @@ def add_cake():
     cake_id = generate_cake_id()
     st.text(f"Generated Cake ID: {cake_id}")
 
+    if not os.path.exists("cake_images"):
+        os.makedirs("cake_images")
+
     name = st.text_input("Cake Name")
-    price = st.number_input("Price", min_value=0.01, format="%.2f")
+    price = st.number_input("Price", min_value=0.01, step=0.01, format="%.2f")
+    uploaded_file = st.file_uploader("Upload Cake Image", type=['png', 'jpg', 'jpeg'])
 
     if st.button("Add Cake"):
         if not name.strip():
@@ -44,21 +68,22 @@ def add_cake():
             st.error("Price must be greater than 0.")
         elif cake_id in cakes:
             st.error("Generated Cake ID already exists. Please try again.")
+        elif uploaded_file is None:
+            st.error("Please upload an image of the cake.")
         else:
-            cakes[cake_id] = {'name': name.strip(), 'price': price}
+            image_path = f"cake_images/{cake_id}_{uploaded_file.name}"
+            with open(image_path, "wb") as f:
+                f.write(uploaded_file.getbuffer())
+
+            cakes[cake_id] = {
+                'name': name.strip(),
+                'price': price,
+                'image_path': image_path
+            }
             save_data(CAKES_FILE, cakes)
             st.success(f"Cake '{name}' added successfully with ID {cake_id}!")
-            # Removed experimental_rerun()
 
-    st.markdown("---")
-    st.write("### Current Cakes in Menu:")
-    if cakes:
-        for id_, cake in cakes.items():
-            st.write(f"- **{cake['name']}** - ${cake['price']:.2f} (ID: {id_})")
-    else:
-        st.info("No cakes added yet.")
-
-# ---------- View Cakes (Menu Style) ----------
+# ---------- View Cakes ----------
 
 def view_cakes():
     st.subheader("🎂 Available Cakes")
@@ -75,9 +100,14 @@ def view_cakes():
         cols = st.columns(cols_per_row)
         for col, (cake_id, cake) in zip(cols, cake_items[i:i+cols_per_row]):
             with col:
+                image_path = cake.get('image_path', None)
+                if image_path and os.path.exists(image_path):
+                    st.image(image_path, width=150)
+                else:
+                    st.markdown("No image available")
+
                 st.markdown(f"### {cake['name']}")
                 st.write(f"**Price:** ${cake['price']:.2f}")
-                st.markdown("🍰")
                 st.caption(f"ID: {cake_id}")
 
 # ---------- Order Management ----------
@@ -118,7 +148,7 @@ def place_order():
                 st.write(f"{item['cake']} x{item['qty']} = ${item['cost']:.2f}")
             st.write(f"**Total:** ${total:.2f}")
 
-# ---------- Reviews Management ----------
+# ---------- Reviews ----------
 
 def show_reviews():
     st.subheader("💬 Customer Reviews")
@@ -145,14 +175,38 @@ def show_reviews():
                 reviews.append({'name': name.strip(), 'comment': comment.strip()})
                 save_data(REVIEWS_FILE, reviews)
                 st.success("Thank you for your review!")
-                # No rerun needed
 
-# ---------- Main App ----------
+# ---------- View Orders (Admin Only) ----------
+
+def view_orders():
+    st.subheader("📦 All Orders (Admin Only)")
+    orders = load_data(ORDERS_FILE, [])
+    if not orders:
+        st.info("No orders placed yet.")
+        return
+
+    for idx, order in enumerate(orders, 1):
+        st.markdown(f"### Order #{idx}")
+        st.write(f"**Customer:** {order['customer']}")
+        for item in order['order']:
+            st.write(f"- {item['cake']} x{item['qty']} = ${item['cost']:.2f}")
+        st.write(f"**Total:** ${order['total']:.2f}")
+        st.markdown("---")
+
+# ---------- Main ----------
 
 def main():
     st.title("🎂 Cake Shop Management System")
 
-    menu = ["Home", "Add Cake", "Place Order", "View Cakes"]
+    # Call admin login first
+    admin_login()
+
+    # Show menu based on login status
+    if st.session_state.admin_authenticated:
+        menu = ["Home", "Add Cake", "Place Order", "View Cakes", "View Orders"]
+    else:
+        menu = ["Home", "Place Order", "View Cakes"]
+
     choice = st.sidebar.selectbox("Navigation", menu)
 
     if choice == "Home":
@@ -180,8 +234,9 @@ def main():
         place_order()
     elif choice == "View Cakes":
         view_cakes()
+    elif choice == "View Orders":
+        view_orders()
 
 if __name__ == "__main__":
     main()
-
 
