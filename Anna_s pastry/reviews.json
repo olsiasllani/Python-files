@@ -1,0 +1,11 @@
+[
+  {
+    "name": "Joe",
+    "comment": "The Best Cakes in town"
+  },
+  {
+    "name": "John",
+    "comment": "The Best taste in town.I would recommend to anyone",
+    "rating": 5
+  }
+]

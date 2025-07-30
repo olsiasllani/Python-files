@@ -1,0 +1,27 @@
+{
+  "Trileqe": {
+    "name": "Trileqe",
+    "price": 20.0,
+    "image_path": "cake_images/101_trileqe.jpg"
+  },
+  "eklera": {
+    "name": "Eklera",
+    "price": 1.5,
+    "image_path": "cake_images/eklera_eklerat.jpg"
+  },
+  "pistachio_cheesecake": {
+    "name": "Pistachio Cheesecake",
+    "price": 30.0,
+    "image_path": "cake_images/pistachio_cheesecake_Post8 final.png"
+  },
+  "obllande": {
+    "name": "Obllande",
+    "price": 20.0,
+    "image_path": "cake_images/obllande_image0.jpeg"
+  },
+  "cherry_cheesecake": {
+    "name": "Cherry Cheesecake",
+    "price": 25.0,
+    "image_path": "cake_images/cherry_cheesecake_chv.jpeg"
+  }
+}
